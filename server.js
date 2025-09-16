@@ -48,7 +48,9 @@ const cronEnabled =
   (process.env.CRON_ENABLED || "true").toLowerCase() !== "false";
 const CRON_TO = process.env.DAILY_EMAIL_TO || "you@example.com";
 // For quick testing you can set CRON_SCHEDULE="*/1 * * * *" in Heroku config
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "0 6 * * *";
+// was: "0 6 * * *"
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "0 6 * * 1-5"; // 06:00 Mon–Fri
+
 const CRON_TZ = process.env.TZ || "Europe/London";
 
 if (isPrimaryDyno && cronEnabled) {
