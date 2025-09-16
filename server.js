@@ -36,6 +36,7 @@ app.post("/send-email", async (req, res) => {
 cron.schedule(
   "0 6 * * *",
   async () => {
+    console.log("[CRON] Scheduled daily job at 06:00 Europe/London");
     try {
       const to = "kofiarhin69@gmail.com";
       await sendEmail({
