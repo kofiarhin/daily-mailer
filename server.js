@@ -17,7 +17,12 @@ app.use(express.json());
 
 // ---------- Health ----------
 app.get("/", (_req, res) => {
-  res.json({ ok: true, ts: new Date().toISOString() });
+  res.json({
+    ok: true,
+    env: process.env.NODE_ENV || "development",
+    dyno: process.env.DYNO || "local",
+    ts: new Date().toISOString(),
+  });
 });
 
 // ---------- Manual send (dynamic recipient) ----------
@@ -43,18 +48,25 @@ app.post("/send-email", async (req, res) => {
 });
 
 // ---------- CRON (Heroku-friendly) ----------
-const isPrimaryDyno = !process.env.DYNO || process.env.DYNO === "web.1"; // avoid duplicates when scaling
+// FIX: schedule on ANY Heroku web dyno (web.1, web.2, web.3, ...), not just web.1
+const isHeroku = !!process.env.DYNO;
+const isWebDyno = isHeroku ? process.env.DYNO.startsWith("web.") : true; // true locally
+const isPrimaryDyno = isWebDyno; // single web dyno → fine; multiple web dynos → consider Scheduler/worker to avoid dupes
+
 const cronEnabled =
   (process.env.CRON_ENABLED || "true").toLowerCase() !== "false";
 const CRON_TO = process.env.DAILY_EMAIL_TO || "you@example.com";
-// For quick testing you can set CRON_SCHEDULE="*/1 * * * *" in Heroku config
-// was: "0 6 * * *"
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "0 6 * * 1-5"; // 06:00 Mon–Fri
-
+// For quick testing set CRON_SCHEDULE="*/1 * * * *" in Heroku config
+// Default: 06:00 every day (use "0 6 * * 1-5" for Mon–Fri)
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "0 6 * * *";
 const CRON_TZ = process.env.TZ || "Europe/London";
 
 if (isPrimaryDyno && cronEnabled) {
-  console.log(`[CRON] scheduling ${CRON_SCHEDULE} (${CRON_TZ})`);
+  console.log(
+    `[CRON] scheduling ${CRON_SCHEDULE} (${CRON_TZ}) on dyno=${
+      process.env.DYNO || "local"
+    }`
+  );
   cron.schedule(
     CRON_SCHEDULE,
     async () => {
@@ -74,11 +86,25 @@ if (isPrimaryDyno && cronEnabled) {
   );
 } else {
   console.log(
-    `[CRON] skipped: isPrimary=${isPrimaryDyno}, enabled=${cronEnabled}`
+    `[CRON] skipped: isWebDyno=${isWebDyno}, enabled=${cronEnabled}, dyno=${
+      process.env.DYNO || "local"
+    }`
   );
 }
 
 // ---------- Start ----------
-app.listen(port, () => {
-  console.log("server started on port:", port);
+const server = app.listen(port, () => {
+  console.log(
+    "server started on port:",
+    port,
+    "dyno:",
+    process.env.DYNO || "local"
+  );
+});
+
+// Graceful shutdown (Heroku dyno cycles)
+process.on("SIGTERM", () => {
+  server.close(() => {
+    console.log("server closed gracefully");
+  });
 });
