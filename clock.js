@@ -16,6 +16,20 @@ const CRON_SCHEDULE = process.env.CRON_SCHEDULE || "0 6 * * *"; // 06:00 daily
 const CRON_TZ = process.env.CRON_TZ || process.env.TZ || "Europe/London";
 const CRON_TO = process.env.DAILY_EMAIL_TO || "you@example.com";
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const sendWithRetry = async (payload, tries = 3) => {
+  for (let i = 1; i <= tries; i++) {
+    try {
+      await sendEmail(payload);
+      return true;
+    } catch (e) {
+      console.error(`[CLOCK] send attempt ${i} failed:`, e?.message || e);
+      if (i < tries) await sleep(1000 * i);
+    }
+  }
+  return false;
+};
+
 // ---------- Boot ----------
 if (!CRON_ENABLED) {
   console.log("[CLOCK] cron disabled, exiting");
@@ -30,16 +44,14 @@ cron.schedule(
   async () => {
     const now = new Date().toISOString();
     console.log(`[CLOCK] tick @ ${now} → sending to ${CRON_TO}`);
-    try {
-      await sendEmail({
-        to: CRON_TO,
-        subject: "Daily 6 AM check-in",
-        text: "Good morning! This is your scheduled email.",
-      });
-      console.log(`[CLOCK] success → ${CRON_TO}`);
-    } catch (err) {
-      console.error("[CLOCK] error:", err);
-    }
+    const ok = await sendWithRetry({
+      to: CRON_TO,
+      subject: "Daily 6 AM check-in",
+      text: "Good morning! This is your scheduled email.",
+    });
+    console.log(
+      ok ? `[CLOCK] success → ${CRON_TO}` : `[CLOCK] failed after retries`
+    );
   },
   { scheduled: true, timezone: CRON_TZ }
 );
