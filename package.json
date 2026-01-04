@@ -10,7 +10,9 @@
   },
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "playground": "nodemon scheduler",
+    "scheduler": "node scheduler.js"
   },
   "dependencies": {
     "dotenv": "^17.2.2",

@@ -21,6 +21,7 @@ app.get("/", (_req, res) => {
     env: process.env.NODE_ENV || "development",
     dyno: process.env.DYNO || "local",
     ts: new Date().toISOString(),
+    message: "this is a happy place dont ruin it",
   });
 });
 
