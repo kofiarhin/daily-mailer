@@ -1,0 +1,13 @@
+###
+POST http://localhost:5000/api/send-mail
+Content-Type: application/json
+
+{
+    "email": "davidkarku69@gmail.com",
+    "subject": "test",
+    "text": "this is a test message",
+    "name": "kofi arhin"
+}
+
+###
+GET http://localhost:5000
